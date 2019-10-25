@@ -1,4 +1,4 @@
-import { GraphQLSchema } from "graphql";
+import { GraphQLSchema, lexicographicSortSchema } from "graphql";
 import { Options as PrintSchemaOptions } from "graphql/utilities/schemaPrinter";
 import * as path from "path";
 
@@ -24,10 +24,15 @@ export interface BuildSchemaOptions extends Omit<SchemaGeneratorOptions, "resolv
    * or `true` for the default `./schema.gql` one
    */
   emitSchemaFile?: string | boolean | EmitSchemaFileOptions;
+  /**
+   * Sort GraphQLSchema.
+   */
+  sortSchema?: boolean;
 }
 export async function buildSchema(options: BuildSchemaOptions): Promise<GraphQLSchema> {
   const resolvers = loadResolvers(options);
-  const schema = await SchemaGenerator.generateFromMetadata({ ...options, resolvers });
+  const unsortedSchema = await SchemaGenerator.generateFromMetadata({ ...options, resolvers });
+  const schema = options.sortSchema ? lexicographicSortSchema(unsortedSchema) : unsortedSchema;
   if (options.emitSchemaFile) {
     const { schemaFileName, printSchemaOptions } = getEmitSchemaDefinitionFileOptions(options);
     await emitSchemaDefinitionFile(schemaFileName, schema, printSchemaOptions);
@@ -37,7 +42,8 @@ export async function buildSchema(options: BuildSchemaOptions): Promise<GraphQLS
 
 export function buildSchemaSync(options: BuildSchemaOptions): GraphQLSchema {
   const resolvers = loadResolvers(options);
-  const schema = SchemaGenerator.generateFromMetadataSync({ ...options, resolvers });
+  const unsortedSchema = SchemaGenerator.generateFromMetadataSync({ ...options, resolvers });
+  const schema = options.sortSchema ? lexicographicSortSchema(unsortedSchema) : unsortedSchema;
   if (options.emitSchemaFile) {
     const { schemaFileName, printSchemaOptions } = getEmitSchemaDefinitionFileOptions(options);
     emitSchemaDefinitionFileSync(schemaFileName, schema, printSchemaOptions);
